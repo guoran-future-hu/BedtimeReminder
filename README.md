@@ -59,6 +59,12 @@ $NoClickDelay = "00:30"   # mm:ss or hh:mm:ss
 $SnoozeDelay = "05:00"    # mm:ss or hh:mm:ss
 ```
 
+Config meanings:
+- `$Bedtime`: When the reminder window starts each night (24‑hour time).
+- `$MorningCutoff`: When reminders stop for the night; also resets `ignoreCount`.
+- `$NoClickDelay`: How long the toast can sit without interaction before it counts as an ignore.
+- `$SnoozeDelay`: How long to wait after a Snooze/ignore before showing the next toast.
+
 ## Use Case
 Best for personal bedtime routines where you want escalating reminders, with a one-click mute for nights when you must stay up.
 
