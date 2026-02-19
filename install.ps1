@@ -2,7 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ScriptPath = Join-Path $BaseDir "bedtime.ps1"
-$TaskName = "BedtimeReminder"
+$TaskName = "bedtime-reminder"
+$LegacyTaskName = "BedtimeReminder"
 
 function Test-IsAdmin {
     $current = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -10,45 +11,55 @@ function Test-IsAdmin {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-$existingTask = $null
-try {
-    $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-} catch {
+function Remove-TaskIfExists {
+    param([string]$Name)
     $existingTask = $null
-}
-
-if ($existingTask) {
-    Write-Host "Existing task found. Unregistering: $TaskName"
     try {
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Stop
-        Write-Host "Unregistered: $TaskName"
+        $existingTask = Get-ScheduledTask -TaskName $Name -ErrorAction Stop
+    } catch {
+        $existingTask = $null
+    }
+
+    if (-not $existingTask) {
+        return
+    }
+
+    Write-Host "Existing task found. Unregistering: $Name"
+    try {
+        Unregister-ScheduledTask -TaskName $Name -Confirm:$false -ErrorAction Stop
+        Write-Host "Unregistered: $Name"
+        return
     } catch {
         Write-Host "Failed to unregister with PowerShell: $_"
         Write-Host "Attempting schtasks.exe deletion..."
+    }
+
+    try {
+        & schtasks.exe /Delete /TN $Name /F | Out-Null
+        Write-Host "schtasks.exe delete attempted. Re-checking..."
+        $check = $null
         try {
-            & schtasks.exe /Delete /TN $TaskName /F | Out-Null
-            Write-Host "schtasks.exe delete attempted. Re-checking..."
-            $check = $null
-            try {
-                $check = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-            } catch {
-                $check = $null
-            }
-            if ($check) {
-                Write-Host "Task still exists. You likely need to run this installer as Administrator once to remove it."
-                Write-Host "Press any key to exit..."
-                [void][System.Console]::ReadKey($true)
-                exit 1
-            }
-            Write-Host "Unregistered: $TaskName"
+            $check = Get-ScheduledTask -TaskName $Name -ErrorAction Stop
         } catch {
-            Write-Host "Failed to delete with schtasks.exe: $_"
+            $check = $null
+        }
+        if ($check) {
+            Write-Host "Task still exists. You likely need to run this installer as Administrator once to remove it."
             Write-Host "Press any key to exit..."
             [void][System.Console]::ReadKey($true)
             exit 1
         }
+        Write-Host "Unregistered: $Name"
+    } catch {
+        Write-Host "Failed to delete with schtasks.exe: $_"
+        Write-Host "Press any key to exit..."
+        [void][System.Console]::ReadKey($true)
+        exit 1
     }
 }
+
+Remove-TaskIfExists -Name $LegacyTaskName
+Remove-TaskIfExists -Name $TaskName
 
 if (-not (Test-Path -LiteralPath $BaseDir)) {
     New-Item -ItemType Directory -Path $BaseDir -Force | Out-Null

@@ -1,4 +1,4 @@
-# BedtimeReminder
+# bedtime-reminder
 
 Windows-only bedtime escalation reminders using PowerShell, Task Scheduler, and BurntToast.
 
@@ -41,12 +41,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\uninstall.ps1
 
 ## Verify It’s Running
 ```powershell
-Get-ScheduledTask -TaskName BedtimeReminder | Get-ScheduledTaskInfo
+Get-ScheduledTask -TaskName bedtime-reminder | Get-ScheduledTaskInfo
 ```
 
 To start immediately (without logoff/logon):
 ```powershell
-Start-ScheduledTask -TaskName BedtimeReminder
+Start-ScheduledTask -TaskName bedtime-reminder
 ```
 
 ## Configure

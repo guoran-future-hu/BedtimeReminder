@@ -164,8 +164,8 @@ function Wait-Until {
 
 function Initialize-ToastEvents {
     $global:ToastActivationQueue = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
-    Unregister-Event -SourceIdentifier 'BedtimeReminder_Activated' -ErrorAction SilentlyContinue
-    Register-ObjectEvent -InputObject ([Microsoft.Toolkit.Uwp.Notifications.ToastNotificationManagerCompat]) -EventName OnActivated -SourceIdentifier 'BedtimeReminder_Activated' -Action {
+    Unregister-Event -SourceIdentifier 'bedtime-reminder_Activated' -ErrorAction SilentlyContinue
+    Register-ObjectEvent -InputObject ([Microsoft.Toolkit.Uwp.Notifications.ToastNotificationManagerCompat]) -EventName OnActivated -SourceIdentifier 'bedtime-reminder_Activated' -Action {
         if (-not $global:ToastActivationQueue) {
             return
         }
@@ -196,7 +196,7 @@ function Show-Toast {
     )
     $snoozeButton = New-BTButton -Content 'Snooze' -Arguments ("snooze|{0}" -f $ToastId) -ActivationType Background
     $muteButton = New-BTButton -Content 'Emergency work (mute tonight)' -Arguments ("mute|{0}" -f $ToastId) -ActivationType Background
-    New-BurntToastNotification -Text $lines -Button @($snoozeButton, $muteButton) -UniqueIdentifier 'BedtimeReminder' | Out-Null
+    New-BurntToastNotification -Text $lines -Button @($snoozeButton, $muteButton) -UniqueIdentifier 'bedtime-reminder' | Out-Null
 }
 
 function Wait-ToastAction {

@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
-$TaskName = "BedtimeReminder"
+$TaskName = "bedtime-reminder"
+$LegacyTaskName = "BedtimeReminder"
 
 function Remove-Task {
     param([string]$Name)
@@ -28,7 +29,13 @@ function Remove-Task {
     }
 }
 
-$ok = Remove-Task -Name $TaskName
+$ok = $true
+if (-not (Remove-Task -Name $LegacyTaskName)) {
+    $ok = $false
+}
+if (-not (Remove-Task -Name $TaskName)) {
+    $ok = $false
+}
 if (-not $ok) {
     Write-Host "Press any key to exit..."
     [void][System.Console]::ReadKey($true)
