@@ -13,12 +13,12 @@ function Get-SessionId {
     return (Get-Process -Id $PID).SessionId
 }
 
-function Parse-TimeSpan {
+function ConvertTo-TimeSpan {
     param([string]$Value)
     return [TimeSpan]::ParseExact($Value, 'hh\:mm', [System.Globalization.CultureInfo]::InvariantCulture)
 }
 
-function Parse-Duration {
+function ConvertTo-Duration {
     param([string]$Value)
     try {
         return [TimeSpan]::Parse($Value, [System.Globalization.CultureInfo]::InvariantCulture)
@@ -27,7 +27,7 @@ function Parse-Duration {
     }
 }
 
-function Parse-StateDate {
+function ConvertTo-StateDate {
     param([string]$Value)
     if ([string]::IsNullOrWhiteSpace($Value)) {
         return $null
@@ -50,7 +50,7 @@ function New-DefaultState {
     }
 }
 
-function Load-State {
+function Get-State {
     param([int]$SessionId)
     $state = New-DefaultState -SessionId $SessionId
     if (-not (Test-Path -LiteralPath $StatePath)) {
@@ -154,7 +154,7 @@ function Get-RecentCutoff {
     return $cutoffToday.AddDays(-1)
 }
 
-function Sleep-Until {
+function Wait-Until {
     param([datetime]$Target)
     $seconds = [int][Math]::Ceiling(($Target - (Get-Date)).TotalSeconds)
     if ($seconds -gt 0) {
@@ -225,15 +225,15 @@ function Lock-Workstation {
 Import-Module BurntToast -ErrorAction Stop
 Initialize-ToastEvents
 
-$bedtimeSpan = Parse-TimeSpan -Value $Bedtime
-$cutoffSpan = Parse-TimeSpan -Value $MorningCutoff
-$noClickSpan = Parse-Duration -Value $NoClickDelay
-$snoozeSpan = Parse-Duration -Value $SnoozeDelay
+$bedtimeSpan = ConvertTo-TimeSpan -Value $Bedtime
+$cutoffSpan = ConvertTo-TimeSpan -Value $MorningCutoff
+$noClickSpan = ConvertTo-Duration -Value $NoClickDelay
+$snoozeSpan = ConvertTo-Duration -Value $SnoozeDelay
 $sessionId = Get-SessionId
 
 while ($true) {
     $now = Get-Date
-    $state = Load-State -SessionId $sessionId
+    $state = Get-State -SessionId $sessionId
     $stateChanged = $false
 
     if ($state.sessionId -ne $sessionId) {
@@ -243,7 +243,7 @@ while ($true) {
     }
 
     $recentCutoff = Get-RecentCutoff -Now $now -Cutoff $cutoffSpan
-    $lastCutoff = Parse-StateDate -Value $state.lastCutoff
+    $lastCutoff = ConvertTo-StateDate -Value $state.lastCutoff
     if (-not $lastCutoff -or $lastCutoff -lt $recentCutoff) {
         $state.ignoreCount = 0
         $state.lastCutoff = $recentCutoff.ToString('o')
@@ -251,7 +251,7 @@ while ($true) {
     }
 
     $window = Get-BedtimeWindow -Now $now -Bedtime $bedtimeSpan -Cutoff $cutoffSpan
-    $mutedUntil = Parse-StateDate -Value $state.mutedUntil
+    $mutedUntil = ConvertTo-StateDate -Value $state.mutedUntil
     if ($mutedUntil -and $mutedUntil -le $now) {
         $state.mutedUntil = $null
         $mutedUntil = $null
@@ -261,18 +261,18 @@ while ($true) {
     if (-not $window.InWindow) {
         $state.nextToast = $window.Start.ToString('o')
         Save-State -State $state
-        Sleep-Until -Target $window.Start
+        Wait-Until -Target $window.Start
         continue
     }
 
     if ($mutedUntil -and $mutedUntil -gt $now) {
         $state.nextToast = $mutedUntil.ToString('o')
         Save-State -State $state
-        Sleep-Until -Target $mutedUntil
+        Wait-Until -Target $mutedUntil
         continue
     }
 
-    $nextToast = Parse-StateDate -Value $state.nextToast
+    $nextToast = ConvertTo-StateDate -Value $state.nextToast
     if (-not $nextToast -or $nextToast -le $now) {
         $toastId = [Guid]::NewGuid().ToString()
         Show-Toast -ToastId $toastId -IgnoreCount $state.ignoreCount
@@ -300,5 +300,5 @@ while ($true) {
     if ($stateChanged) {
         Save-State -State $state
     }
-    Sleep-Until -Target $nextToast
+    Wait-Until -Target $nextToast
 }
